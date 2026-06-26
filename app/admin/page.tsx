@@ -109,7 +109,7 @@ interface StaffForm {
 const EMPTY_STAFF: StaffForm = { name: '', email: '', password: '', role: 'ADMIN' };
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
 
   // State
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
             )}
           </div>
           <button
-            onClick={() => logout()}
+            onClick={() => signOut()}
             className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-[#EF4444] hover:bg-red-50 py-2 px-3 rounded-lg transition-colors"
           >
             <LogOut className="h-4 w-4" />
