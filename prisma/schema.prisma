@@ -4,9 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  provider = "postgresql"
 }
 
 enum Role {
@@ -84,9 +82,7 @@ model Order {
   subtotal  Float
   tax       Float       @default(0)
   shipping  Float       @default(0)
-  // Serialised shipping address JSON
   address   String      @db.Text
-  // Serialised array of { productId, name, image, price, quantity, size?, color? }
   items     String      @db.Text
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
@@ -94,9 +90,6 @@ model Order {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Products added via the admin panel are stored here.
-// The storefront mock data is in data/mock.ts — a future migration
-// would consolidate both into this table.
 model AdminProduct {
   id          String   @id @default(cuid())
   name        String
@@ -107,8 +100,8 @@ model AdminProduct {
   categoryId  String
   brand       String?
   stock       Int?
-  sizes       String?  // JSON array e.g. '["S","M","L"]'
-  colors      String?  // JSON array e.g. '["Black","White"]'
+  sizes       String?
+  colors      String?
   isNew       Boolean  @default(false)
   createdById String
   createdAt   DateTime @default(now())
