@@ -1,5 +1,7 @@
 // middleware.ts
-import { auth } from '@/lib/auth';
+// NOTE: Edge Runtime cannot import Prisma. We rely purely on NextAuth JWT here.
+// The auth() wrapper from next-auth/middleware handles token verification at the edge.
+import { auth } from '@/lib/auth-edge';
 import { NextResponse } from 'next/server';
 
 const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'EDITOR'];

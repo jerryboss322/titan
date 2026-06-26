@@ -3,15 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
 
 const STEPS = ['Cart Review', 'Shipping', 'Payment', 'Confirmation'];
-const TAX = 0.075;
+const TAX_RATE = 0.075;
 const SHIPPING_COST = 12.99;
+const FREE_SHIPPING_THRESHOLD = 150;
 
 function StepIndicator({ step, current }: { step: number; current: number }) {
   const done = current > step;
@@ -26,22 +27,70 @@ function StepIndicator({ step, current }: { step: number; current: number }) {
   );
 }
 
+function OrderSummaryBox({ subtotal, tax, shipping, total }: { subtotal: number; tax: number; shipping: number; total: number }) {
+  return (
+    <div className="mt-6 bg-gray-50 border border-border rounded-xl p-4 space-y-2 text-sm">
+      <div className="flex justify-between text-secondary"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+      <div className="flex justify-between text-secondary"><span>Tax (7.5%)</span><span>${tax.toFixed(2)}</span></div>
+      <div className="flex justify-between text-secondary">
+        <span>Shipping</span>
+        <span>{shipping === 0 ? <span className="text-green-600 font-medium">Free</span> : `$${shipping.toFixed(2)}`}</span>
+      </div>
+      <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total</span><span>${total.toFixed(2)}</span></div>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const [step, setStep] = useState(1);
-  const [address, setAddress] = useState({ first: '', last: '', address: '', city: '', state: '', zip: '', country: 'Nigeria' });
+  const [address, setAddress] = useState({
+    first: '', last: '', address: '', city: '', state: '', zip: '', country: 'Nigeria',
+  });
   const [payment, setPayment] = useState({ card: '', name: '', expiry: '', cvv: '' });
-  const [orderNumber] = useState(`TIT-${Math.floor(Math.random() * 9000 + 1000)}`);
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [placing, setPlacing] = useState(false);
   const { items, subtotal, clearCart } = useCart();
   const { toast } = useToast();
 
-  const tax = subtotal * TAX;
-  const shipping = subtotal >= 150 ? 0 : SHIPPING_COST;
+  const tax = subtotal * TAX_RATE;
+  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = subtotal + tax + shipping;
 
-  const handlePlaceOrder = () => {
-    clearCart();
-    setStep(4);
-    toast('Order placed successfully!');
+  const handlePlaceOrder = async () => {
+    setPlacing(true);
+    try {
+      const orderItems = items.map(i => ({
+        productId: i.product.id,
+        name: i.product.name,
+        image: i.product.image,
+        price: i.product.price,
+        quantity: i.quantity,
+        size: i.selectedSize,
+        color: i.selectedColor,
+      }));
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: orderItems, address, subtotal, tax, shipping, total }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast(data.error ?? 'Failed to place order. Please try again.');
+        return;
+      }
+
+      clearCart();
+      setPlacedOrderId(data.data.id);
+      setStep(4);
+      toast('Order placed successfully!');
+    } catch {
+      toast('Something went wrong. Please try again.');
+    } finally {
+      setPlacing(false);
+    }
   };
 
   if (items.length === 0 && step < 4) {
@@ -71,7 +120,7 @@ export default function CheckoutPage() {
           <h2 className="text-2xl font-display font-bold mb-6">Review Your Cart</h2>
           <div className="space-y-3 mb-8">
             {items.map(item => (
-              <div key={item.product.id} className="flex gap-4 bg-white border border-border rounded-xl p-4 items-center">
+              <div key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}`} className="flex gap-4 bg-white border border-border rounded-xl p-4 items-center">
                 <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
                   <Image src={item.product.image} alt={item.product.name} fill className="object-cover" unoptimized />
                 </div>
@@ -92,23 +141,27 @@ export default function CheckoutPage() {
       {step === 2 && (
         <div>
           <h2 className="text-2xl font-display font-bold mb-6">Shipping Address</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="text-sm font-medium block mb-1.5">First name</label><Input value={address.first} onChange={e => setAddress(a => ({ ...a, first: e.target.value }))} placeholder="Jane" /></div>
-            <div><label className="text-sm font-medium block mb-1.5">Last name</label><Input value={address.last} onChange={e => setAddress(a => ({ ...a, last: e.target.value }))} placeholder="Doe" /></div>
-            <div className="col-span-2"><label className="text-sm font-medium block mb-1.5">Address</label><Input value={address.address} onChange={e => setAddress(a => ({ ...a, address: e.target.value }))} placeholder="123 Main St" /></div>
-            <div><label className="text-sm font-medium block mb-1.5">City</label><Input value={address.city} onChange={e => setAddress(a => ({ ...a, city: e.target.value }))} placeholder="Lagos" /></div>
-            <div><label className="text-sm font-medium block mb-1.5">State</label><Input value={address.state} onChange={e => setAddress(a => ({ ...a, state: e.target.value }))} placeholder="Lagos State" /></div>
-            <div><label className="text-sm font-medium block mb-1.5">ZIP / Postal code</label><Input value={address.zip} onChange={e => setAddress(a => ({ ...a, zip: e.target.value }))} placeholder="100001" /></div>
-            <div>
-              <label className="text-sm font-medium block mb-1.5">Country</label>
-              <select className="w-full px-3 py-2 border border-border rounded-lg text-sm" value={address.country} onChange={e => setAddress(a => ({ ...a, country: e.target.value }))}>
-                {['Nigeria', 'Ghana', 'South Africa', 'United Kingdom', 'United States', 'Canada'].map(c => <option key={c}>{c}</option>)}
-              </select>
+          <div className="bg-white border border-border rounded-2xl p-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="text-sm font-medium block mb-1.5">First name</label><Input value={address.first} onChange={e => setAddress(a => ({ ...a, first: e.target.value }))} placeholder="Jane" /></div>
+              <div><label className="text-sm font-medium block mb-1.5">Last name</label><Input value={address.last} onChange={e => setAddress(a => ({ ...a, last: e.target.value }))} placeholder="Doe" /></div>
+              <div className="col-span-2"><label className="text-sm font-medium block mb-1.5">Address</label><Input value={address.address} onChange={e => setAddress(a => ({ ...a, address: e.target.value }))} placeholder="123 Main St" /></div>
+              <div><label className="text-sm font-medium block mb-1.5">City</label><Input value={address.city} onChange={e => setAddress(a => ({ ...a, city: e.target.value }))} placeholder="Lagos" /></div>
+              <div><label className="text-sm font-medium block mb-1.5">State</label><Input value={address.state} onChange={e => setAddress(a => ({ ...a, state: e.target.value }))} placeholder="Lagos State" /></div>
+              <div><label className="text-sm font-medium block mb-1.5">ZIP / Postal code</label><Input value={address.zip} onChange={e => setAddress(a => ({ ...a, zip: e.target.value }))} placeholder="100001" /></div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Country</label>
+                <select className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold/40" value={address.country} onChange={e => setAddress(a => ({ ...a, country: e.target.value }))}>
+                  {['Nigeria', 'Ghana', 'South Africa', 'United Kingdom', 'United States', 'Canada'].map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
           </div>
-          <div className="flex gap-3 mt-8">
+          <div className="flex gap-3 mt-6">
             <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-            <Button className="flex-1" onClick={() => setStep(3)} disabled={!address.first || !address.last || !address.address || !address.city}>Continue to Payment</Button>
+            <Button className="flex-1" onClick={() => setStep(3)} disabled={!address.first || !address.last || !address.address || !address.city}>
+              Continue to Payment
+            </Button>
           </div>
         </div>
       )}
@@ -116,9 +169,9 @@ export default function CheckoutPage() {
       {/* Step 3: Payment */}
       {step === 3 && (
         <div>
-          <h2 className="text-2xl font-display font-bold mb-6">Payment Method</h2>
-          <div className="bg-gold/10 border border-gold/30 rounded-xl px-4 py-3 text-sm text-secondary mb-6">
-            This is a demo checkout. No real payment will be processed.
+          <h2 className="text-2xl font-display font-bold mb-6">Payment</h2>
+          <div className="bg-gold/10 border border-gold/30 rounded-xl px-4 py-3 text-sm text-secondary mb-4">
+            Payment integration (Paystack / Stripe) is coming soon. Your order will be recorded and confirmed when ready.
           </div>
           <div className="bg-white border border-border rounded-2xl p-6 space-y-4">
             <div><label className="text-sm font-medium block mb-1.5">Card number</label><Input value={payment.card} onChange={e => setPayment(p => ({ ...p, card: e.target.value }))} placeholder="4242 4242 4242 4242" maxLength={19} /></div>
@@ -129,9 +182,18 @@ export default function CheckoutPage() {
             </div>
           </div>
           <OrderSummaryBox subtotal={subtotal} tax={tax} shipping={shipping} total={total} />
-          <div className="flex gap-3 mt-8">
-            <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-            <Button className="flex-1" size="lg" onClick={handlePlaceOrder}>Place Order · ${total.toFixed(2)}</Button>
+          <div className="flex gap-3 mt-6">
+            <Button variant="outline" onClick={() => setStep(2)} disabled={placing}>Back</Button>
+            <Button className="flex-1" size="lg" onClick={handlePlaceOrder} disabled={placing}>
+              {placing ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Placing order...
+                </span>
+              ) : (
+                `Place Order · $${total.toFixed(2)}`
+              )}
+            </Button>
           </div>
         </div>
       )}
@@ -144,28 +206,19 @@ export default function CheckoutPage() {
           </div>
           <h2 className="text-3xl font-display font-bold">Order Confirmed!</h2>
           <p className="text-secondary mt-3 text-lg">Thank you for shopping with Titan.</p>
-          <div className="mt-6 bg-white border border-border rounded-2xl p-6 max-w-sm mx-auto">
-            <p className="text-sm text-secondary">Order Number</p>
-            <p className="text-2xl font-mono font-bold text-gold mt-1">{orderNumber}</p>
-            <p className="text-sm text-secondary mt-4">A confirmation email has been sent to your inbox. Your order will arrive in 3–7 business days.</p>
-          </div>
+          {placedOrderId && (
+            <div className="mt-6 bg-white border border-border rounded-2xl p-6 max-w-sm mx-auto">
+              <p className="text-sm text-secondary">Order ID</p>
+              <p className="text-lg font-mono font-bold text-gold mt-1 break-all">{placedOrderId}</p>
+              <p className="text-sm text-secondary mt-4">Your order has been recorded. We will reach out with delivery details shortly.</p>
+            </div>
+          )}
           <div className="flex gap-3 justify-center mt-8">
             <Link href="/orders"><Button variant="outline">View Orders</Button></Link>
             <Link href="/shop"><Button>Continue Shopping</Button></Link>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function OrderSummaryBox({ subtotal, tax, shipping, total }: { subtotal: number; tax: number; shipping: number; total: number }) {
-  return (
-    <div className="mt-6 bg-gray-50 border border-border rounded-xl p-4 space-y-2 text-sm">
-      <div className="flex justify-between text-secondary"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-      <div className="flex justify-between text-secondary"><span>Tax</span><span>${tax.toFixed(2)}</span></div>
-      <div className="flex justify-between text-secondary"><span>Shipping</span><span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span></div>
-      <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total</span><span>${total.toFixed(2)}</span></div>
     </div>
   );
 }

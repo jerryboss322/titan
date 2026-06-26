@@ -6,9 +6,9 @@ const prisma = new PrismaClient();
 
 const SEED_ACCOUNTS = [
   {
-    name: 'Jerry Boss',
-    email: 'superadmin@titan.com',
-    password: 'SuperAdmin@123',
+    name: 'Jerry Adewole',
+    email: 'jerryadewole2023@gmail.com',
+    password: 'Jerry2005',
     role: 'SUPER_ADMIN' as const,
     image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80',
   },

@@ -27,8 +27,10 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  adminProducts AdminProduct[]
 }
 
 model Account {
@@ -64,4 +66,59 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  userId    String
+  status    OrderStatus @default(PENDING)
+  total     Float
+  subtotal  Float
+  tax       Float       @default(0)
+  shipping  Float       @default(0)
+  // Serialised shipping address JSON
+  address   String      @db.Text
+  // Serialised array of { productId, name, image, price, quantity, size?, color? }
+  items     String      @db.Text
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Products added via the admin panel are stored here.
+// The storefront mock data is in data/mock.ts — a future migration
+// would consolidate both into this table.
+model AdminProduct {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @db.Text
+  price       Float
+  oldPrice    Float?
+  image       String
+  categoryId  String
+  brand       String?
+  stock       Int?
+  sizes       String?  // JSON array e.g. '["S","M","L"]'
+  colors      String?  // JSON array e.g. '["Black","White"]'
+  isNew       Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id])
+}
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  subscribedAt DateTime @default(now())
 }
