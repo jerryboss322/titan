@@ -365,11 +365,11 @@ export const adminStats = {
     { month: 'Dec', value: 31750, revenue: 31750 },
   ],
   recentOrders: [
-    { id: 'TIT-1291', customer: 'Aisha Bello', product: 'Leather Jacket', amount: 249.99, status: 'Processing' },
-    { id: 'TIT-1290', customer: 'James Okafor', product: 'Minimalist Watch', amount: 159.99, status: 'Shipped' },
-    { id: 'TIT-1289', customer: 'Fatima Yusuf', product: 'Cashmere Sweater', amount: 189.99, status: 'Delivered' },
-    { id: 'TIT-1288', customer: 'Emeka Nwosu', product: 'Leather Tote Bag', amount: 299.99, status: 'Delivered' },
-    { id: 'TIT-1287', customer: 'Grace Adeyemi', product: 'Silk Blouse', amount: 89.99, status: 'Cancelled' },
+    { id: 'TIT-1291', customer: 'Aisha Bello', product: 'Leather Jacket', amount: 249.99, total: 249.99, items: 1, status: 'Processing' },
+    { id: 'TIT-1290', customer: 'James Okafor', product: 'Minimalist Watch', amount: 159.99, total: 159.99, items: 1, status: 'Shipped' },
+    { id: 'TIT-1289', customer: 'Fatima Yusuf', product: 'Cashmere Sweater', amount: 189.99, total: 189.99, items: 1, status: 'Delivered' },
+    { id: 'TIT-1288', customer: 'Emeka Nwosu', product: 'Leather Tote Bag', amount: 299.99, total: 299.99, items: 1, status: 'Delivered' },
+    { id: 'TIT-1287', customer: 'Grace Adeyemi', product: 'Silk Blouse', amount: 89.99, total: 89.99, items: 1, status: 'Cancelled' },
   ],
   topProducts: [
     { name: 'Classic Leather Jacket', sales: 84, revenue: 20999 },
